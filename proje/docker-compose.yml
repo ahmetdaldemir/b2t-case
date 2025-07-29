@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: b2b_app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - b2b_network
+
+  webserver:
+    image: nginx:alpine
+    container_name: b2b_nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - b2b_network
+
+  db:
+    image: mysql:8.0
+    container_name: b2b_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: b2cd
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: b2c
+      MYSQL_PASSWORD: b2c
+    ports:
+      - "3308:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - b2b_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: b2b_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: b2c
+      PMA_PASSWORD: b2c
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      - db
+    networks:
+      - b2b_network
+
+  redis:
+    image: redis:alpine
+    container_name: b2b_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - b2b_network
+
+networks:
+  b2b_network:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local
+  redisdata:
+    driver: local
